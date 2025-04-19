@@ -15,12 +15,20 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '16'
+          cache: 'npm'
 
       - name: Install dependencies
         run: npm install
 
+      - name: Create empty package-lock.json if it doesn't exist
+        run: |
+          if [ ! -f package-lock.json ]; then
+            echo "{}" > package-lock.json
+          fi
+
       - name: Build
-        run: npm run build
+        run: |
+          npm run build || (echo "Build failed, checking TypeScript errors" && npx tsc --noEmit && exit 1)
 
       - name: Deploy
         uses: JamesIves/github-pages-deploy-action@v4
