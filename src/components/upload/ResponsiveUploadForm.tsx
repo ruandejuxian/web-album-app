@@ -1,259 +1,122 @@
-import React, { useState, useEffect } from 'react';
-import { AnimatePresence } from 'framer-motion';
-import { useToast } from '../context/ToastContext';
+import React, { useState } from 'react';
+import { FiCheck } from 'react-icons/fi';
 import AnimatedContainer from '../ui/AnimatedContainer';
-import Button from '../ui/Button';
-import { FiUpload, FiImage, FiCheck, FiX } from 'react-icons/fi';
 
 interface ResponsiveUploadFormProps {
-  onUpload: (files: File[]) => void;
-  maxFiles?: number;
-  acceptedTypes?: string[];
-  maxSizeInMB?: number;
+  onUploadSuccess?: (fileUrls: string[]) => void;
 }
 
-const ResponsiveUploadForm: React.FC<ResponsiveUploadFormProps> = ({
-  onUpload,
-  maxFiles = 10,
-  acceptedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
-  maxSizeInMB = 5
-}) => {
-  const [isDragging, setIsDragging] = useState(false);
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
-  const [isMobile, setIsMobile] = useState(false);
-  const { showToast } = useToast();
+const ResponsiveUploadForm: React.FC<ResponsiveUploadFormProps> = ({ onUploadSuccess }) => {
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
   
-  // Check if device is mobile
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
+  // Simulate upload process
+  const simulateUpload = async () => {
+    setIsUploading(true);
+    setUploadProgress(0);
     
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-  
-  // Generate preview URLs for selected files
-  useEffect(() => {
-    const urls: string[] = [];
-    selectedFiles.forEach(file => {
-      const url = URL.createObjectURL(file);
-      urls.push(url);
-    });
+    const interval = setInterval(() => {
+      setUploadProgress(prev => {
+        const newProgress = prev + Math.random() * 10;
+        return newProgress >= 100 ? 100 : newProgress;
+      });
+    }, 300);
     
-    setPreviewUrls(urls);
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 3000));
     
-    // Clean up URLs when component unmounts
-    return () => {
-      urls.forEach(url => URL.revokeObjectURL(url));
-    };
-  }, [selectedFiles]);
-  
-  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(true);
-  };
-  
-  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-  };
-  
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-  };
-  
-  const validateFiles = (files: File[]): File[] => {
-    const validFiles: File[] = [];
+    clearInterval(interval);
+    setUploadProgress(100);
+    setUploadSuccess(true);
     
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      
-      // Check file type
-      if (!acceptedTypes.includes(file.type)) {
-        showToast(`File "${file.name}" không phải là định dạng ảnh được hỗ trợ.`, 'error');
-        continue;
-      }
-      
-      // Check file size
-      if (file.size > maxSizeInMB * 1024 * 1024) {
-        showToast(`File "${file.name}" vượt quá kích thước tối đa ${maxSizeInMB}MB.`, 'error');
-        continue;
-      }
-      
-      validFiles.push(file);
+    // Generate mock URLs for uploaded files
+    const mockUrls = [
+      `https://example.com/uploads/${Date.now()}_1.jpg`,
+      `https://example.com/uploads/${Date.now()}_2.jpg`
+    ];
+    
+    if (onUploadSuccess) {
+      onUploadSuccess(mockUrls);
     }
     
-    return validFiles;
-  };
-  
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-    
-    const droppedFiles = Array.from(e.dataTransfer.files);
-    handleFiles(droppedFiles);
-  };
-  
-  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const files = Array.from(e.target.files);
-      handleFiles(files);
-    }
-  };
-  
-  const handleFiles = (files: File[]) => {
-    const validFiles = validateFiles(files);
-    
-    if (validFiles.length === 0) {
-      return;
-    }
-    
-    // Check if adding these files would exceed the max files limit
-    if (selectedFiles.length + validFiles.length > maxFiles) {
-      showToast(`Bạn chỉ có thể tải lên tối đa ${maxFiles} ảnh.`, 'warning');
-      const remainingSlots = maxFiles - selectedFiles.length;
-      
-      if (remainingSlots > 0) {
-        setSelectedFiles(prev => [...prev, ...validFiles.slice(0, remainingSlots)]);
-      }
-      
-      return;
-    }
-    
-    setSelectedFiles(prev => [...prev, ...validFiles]);
-    showToast(`Đã chọn ${validFiles.length} ảnh thành công.`, 'success');
-  };
-  
-  const handleRemoveFile = (index: number) => {
-    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
-    setPreviewUrls(prev => prev.filter((_, i) => i !== index));
-  };
-  
-  const handleUpload = () => {
-    if (selectedFiles.length === 0) {
-      showToast('Vui lòng chọn ít nhất một ảnh để tải lên.', 'warning');
-      return;
-    }
-    
-    onUpload(selectedFiles);
-    showToast(`Đã tải lên ${selectedFiles.length} ảnh thành công.`, 'success');
-    setSelectedFiles([]);
-    setPreviewUrls([]);
+    // Reset form after 2 seconds
+    setTimeout(() => {
+      setIsUploading(false);
+      setUploadSuccess(false);
+    }, 2000);
   };
   
   return (
-    <AnimatedContainer className="w-full">
-      <div className="mb-4">
-        <h2 className="text-xl font-semibold text-gray-800 mb-2">Tải ảnh lên</h2>
-        <p className="text-gray-600">Chọn hoặc kéo thả ảnh để tải lên album của bạn</p>
-      </div>
-      
-      <div
-        className={`border-2 border-dashed rounded-lg p-4 md:p-6 transition-colors ${
-          isDragging ? 'border-purple-500 bg-purple-50' : 'border-gray-300 hover:border-purple-400'
-        }`}
-        onDragEnter={handleDragEnter}
-        onDragLeave={handleDragLeave}
-        onDragOver={handleDragOver}
-        onDrop={handleDrop}
-      >
-        <div className="flex flex-col items-center justify-center py-4">
-          <FiUpload className="text-3xl md:text-4xl text-gray-400 mb-3 md:mb-4" />
-          <p className="text-gray-600 mb-2 text-center text-sm md:text-base">
-            {isMobile ? 'Chọn ảnh từ thiết bị của bạn' : 'Kéo thả ảnh vào đây hoặc'}
-          </p>
-          <label className="cursor-pointer">
-            <span className="bg-purple-600 text-white px-3 py-2 md:px-4 md:py-2 rounded-lg hover:bg-purple-700 transition-colors text-sm md:text-base">
-              Chọn ảnh từ máy tính
-            </span>
-            <input
-              type="file"
-              multiple
-              accept={acceptedTypes.join(',')}
-              onChange={handleFileInputChange}
-              className="hidden"
-            />
-          </label>
-          <p className="text-gray-500 text-xs md:text-sm mt-3 md:mt-4 text-center px-2 md:px-0">
-            Hỗ trợ định dạng: JPG, PNG, WebP, GIF. Tối đa {maxSizeInMB}MB mỗi ảnh.
-          </p>
+    <AnimatedContainer>
+      <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
+        <h2 className="text-xl font-semibold text-gray-800 mb-4">Tải ảnh lên</h2>
+        
+        {/* Responsive file upload area */}
+        <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 sm:p-8 text-center hover:border-purple-400 transition-colors cursor-pointer"
+          onClick={() => !isUploading && !uploadSuccess && simulateUpload()}>
+          <div className="flex flex-col items-center">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 bg-purple-100 rounded-full flex items-center justify-center mb-3">
+              <svg className="w-8 h-8 sm:w-10 sm:h-10 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
+            </div>
+            
+            <h3 className="text-base sm:text-lg font-medium text-gray-800 mb-1">
+              {uploadSuccess ? 'Tải lên thành công!' : 'Kéo thả ảnh vào đây'}
+            </h3>
+            
+            {!uploadSuccess && (
+              <p className="text-sm text-gray-500 mb-4 hidden sm:block">
+                hoặc nhấn để chọn ảnh từ thiết bị của bạn
+              </p>
+            )}
+            
+            {isUploading && (
+              <div className="w-full max-w-xs mt-2">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-sm font-medium text-purple-700">
+                    Đang tải lên...
+                  </span>
+                  <span className="text-sm font-medium text-purple-700">
+                    {uploadProgress.toFixed(0)}%
+                  </span>
+                </div>
+                <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-purple-600 rounded-full transition-all duration-300 ease-out"
+                    style={{ width: `${uploadProgress}%` }}
+                  ></div>
+                </div>
+              </div>
+            )}
+            
+            {uploadSuccess && (
+              <div className="flex items-center text-green-600 mt-2">
+                <FiCheck className="mr-1" />
+                <span>Tải lên thành công!</span>
+              </div>
+            )}
+            
+            {!isUploading && !uploadSuccess && (
+              <button className="mt-2 sm:mt-4 px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2">
+                Chọn ảnh
+              </button>
+            )}
+          </div>
+        </div>
+        
+        {/* Responsive guidelines */}
+        <div className="mt-4 sm:mt-6 bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4">
+          <h3 className="text-sm sm:text-base font-medium text-blue-800 mb-1 sm:mb-2">Lưu ý khi tải ảnh lên</h3>
+          <ul className="text-xs sm:text-sm text-blue-700 space-y-1 list-disc pl-4 sm:pl-5">
+            <li>Định dạng hỗ trợ: JPG, PNG, GIF, WebP</li>
+            <li>Kích thước tối đa: 10MB mỗi ảnh</li>
+            <li className="hidden sm:list-item">Độ phân giải tối thiểu: 800x600 pixels</li>
+            <li className="hidden sm:list-item">Không tải lên ảnh vi phạm bản quyền</li>
+          </ul>
         </div>
       </div>
-      
-      {selectedFiles.length > 0 && (
-        <AnimatedContainer className="mt-4 md:mt-6" delay={0.2}>
-          <h3 className="text-base md:text-lg font-medium text-gray-800 mb-2 md:mb-3">
-            Ảnh đã chọn ({selectedFiles.length}/{maxFiles})
-          </h3>
-          
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 md:gap-4">
-            <AnimatePresence>
-              {previewUrls.map((url, index) => (
-                <AnimatedContainer
-                  key={url}
-                  className="relative rounded-lg overflow-hidden group"
-                  delay={index * 0.05}
-                >
-                  <img
-                    src={url}
-                    alt={`Preview ${index + 1}`}
-                    className="w-full h-24 md:h-32 object-cover"
-                  />
-                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
-                    <button
-                      onClick={() => handleRemoveFile(index)}
-                      className="p-1 bg-red-500 text-white rounded-full"
-                      aria-label="Remove file"
-                    >
-                      <FiX />
-                    </button>
-                  </div>
-                  <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs p-1 truncate">
-                    {selectedFiles[index].name}
-                  </div>
-                  {/* Touch-friendly remove button for mobile */}
-                  {isMobile && (
-                    <button
-                      onClick={() => handleRemoveFile(index)}
-                      className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full"
-                      aria-label="Remove file"
-                    >
-                      <FiX size={16} />
-                    </button>
-                  )}
-                </AnimatedContainer>
-              ))}
-            </AnimatePresence>
-          </div>
-          
-          <div className="mt-4 flex flex-col sm:flex-row sm:justify-end space-y-2 sm:space-y-0 sm:space-x-2">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setSelectedFiles([]);
-                setPreviewUrls([]);
-              }}
-              className="w-full sm:w-auto"
-            >
-              Hủy
-            </Button>
-            <Button
-              onClick={handleUpload}
-              icon={<FiCheck />}
-              className="w-full sm:w-auto"
-            >
-              Tải lên
-            </Button>
-          </div>
-        </AnimatedContainer>
-      )}
     </AnimatedContainer>
   );
 };

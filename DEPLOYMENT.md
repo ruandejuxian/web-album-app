@@ -1,6 +1,6 @@
 # Hướng Dẫn Triển Khai Web Album Ảnh
 
-Tài liệu này cung cấp hướng dẫn chi tiết về cách cài đặt, cấu hình và triển khai dự án Web Album Ảnh lên các nền tảng khác nhau.
+Tài liệu này cung cấp hướng dẫn chi tiết về cách cài đặt, cấu hình và triển khai dự án Web Album Ảnh lên GitHub Pages.
 
 ## Mục lục
 
@@ -9,18 +9,14 @@ Tài liệu này cung cấp hướng dẫn chi tiết về cách cài đặt, c�
 3. [Cấu hình API Keys](#cấu-hình-api-keys)
 4. [Xây dựng phiên bản sản xuất](#xây-dựng-phiên-bản-sản-xuất)
 5. [Triển khai lên GitHub Pages](#triển-khai-lên-github-pages)
-6. [Triển khai lên Netlify](#triển-khai-lên-netlify)
-7. [Triển khai lên Vercel](#triển-khai-lên-vercel)
-8. [Cấu trúc thư mục dự án](#cấu-trúc-thư-mục-dự-án)
-9. [Khắc phục sự cố](#khắc-phục-sự-cố)
+6. [Khắc phục sự cố](#khắc-phục-sự-cố)
 
 ## Yêu cầu hệ thống
 
 - Node.js (phiên bản 16.0.0 trở lên)
 - npm (phiên bản 8.0.0 trở lên) hoặc yarn (phiên bản 1.22.0 trở lên)
 - Trình duyệt web hiện đại (Chrome, Firefox, Safari, Edge)
-- Tài khoản Google Cloud Platform (cho Google Vision API)
-- Tài khoản Hugging Face (cho AI Album Creator)
+- Tài khoản GitHub (để triển khai lên GitHub Pages)
 
 ## Cài đặt và chạy ứng dụng
 
@@ -107,28 +103,24 @@ Kết quả build sẽ được lưu trong thư mục `dist/`.
 
 ## Triển khai lên GitHub Pages
 
-### Bước 1: Cấu hình base URL
+### Bước 1: Cấu hình base URL trong vite.config.ts
 
-Chỉnh sửa file `vite.config.ts` để thêm base URL:
+Đảm bảo rằng file `vite.config.ts` đã được cấu hình với base URL chính xác:
 
 ```typescript
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
 export default defineConfig({
+  plugins: [react()],
   base: '/web-album-app/', // Tên repository GitHub của bạn
-  // ...
+  // Các cấu hình khác...
 })
 ```
 
-### Bước 2: Xây dựng ứng dụng
+### Bước 2: Cấu hình GitHub Actions
 
-```bash
-npm run build
-```
-
-### Bước 3: Triển khai lên GitHub Pages
-
-Cách 1: Sử dụng GitHub Actions
-
-Tạo file `.github/workflows/deploy.yml` với nội dung:
+Đảm bảo rằng bạn có file `.github/workflows/deploy.yml` với nội dung sau:
 
 ```yaml
 name: Deploy to GitHub Pages
@@ -148,12 +140,20 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '16'
+          cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
+
+      - name: Create empty package-lock.json if it doesn't exist
+        run: |
+          if [ ! -f package-lock.json ]; then
+            echo "{}" > package-lock.json
+          fi
 
       - name: Build
-        run: npm run build
+        run: |
+          npm run build || (echo "Build failed, checking TypeScript errors" && npx tsc --noEmit && exit 1)
 
       - name: Deploy
         uses: JamesIves/github-pages-deploy-action@v4
@@ -161,145 +161,56 @@ jobs:
           folder: dist
 ```
 
-Cách 2: Sử dụng gh-pages package
+### Bước 3: Đẩy code lên GitHub
 
 ```bash
-npm install --save-dev gh-pages
+git add .
+git commit -m "Cập nhật cấu hình triển khai"
+git push origin main
 ```
 
-Thêm script vào `package.json`:
+### Bước 4: Cấu hình GitHub Pages
 
-```json
-"scripts": {
-  "deploy": "gh-pages -d dist"
-}
+1. Truy cập repository của bạn trên GitHub
+2. Vào phần "Settings" > "Pages"
+3. Trong phần "Source", chọn "GitHub Actions"
+4. GitHub Actions sẽ tự động triển khai trang web mỗi khi bạn đẩy code lên nhánh main
+
+### Bước 5: Truy cập trang web
+
+Sau khi triển khai thành công, trang web của bạn sẽ có thể truy cập tại:
 ```
-
-Sau đó chạy:
-
-```bash
-npm run deploy
-```
-
-## Triển khai lên Netlify
-
-### Bước 1: Tạo tài khoản Netlify
-
-Đăng ký tại [Netlify](https://www.netlify.com/).
-
-### Bước 2: Kết nối với GitHub
-
-1. Nhấp vào "New site from Git"
-2. Chọn GitHub và xác thực
-3. Chọn repository của dự án
-
-### Bước 3: Cấu hình triển khai
-
-Cấu hình như sau:
-- Build command: `npm run build`
-- Publish directory: `dist`
-
-### Bước 4: Cấu hình biến môi trường
-
-Thêm các biến môi trường trong phần "Site settings > Build & deploy > Environment":
-- `VITE_GOOGLE_API_KEY`
-- `VITE_GOOGLE_VISION_API_KEY`
-- `VITE_HUGGINGFACE_API_KEY`
-
-### Bước 5: Triển khai
-
-Nhấp vào "Deploy site". Netlify sẽ tự động xây dựng và triển khai ứng dụng.
-
-## Triển khai lên Vercel
-
-### Bước 1: Tạo tài khoản Vercel
-
-Đăng ký tại [Vercel](https://vercel.com/).
-
-### Bước 2: Cài đặt Vercel CLI (tùy chọn)
-
-```bash
-npm install -g vercel
-```
-
-### Bước 3: Triển khai
-
-Cách 1: Sử dụng Vercel Dashboard
-1. Nhấp vào "Import Project"
-2. Chọn "Import Git Repository" và kết nối với GitHub
-3. Chọn repository của dự án
-4. Cấu hình như sau:
-   - Framework Preset: Vite
-   - Build Command: `npm run build`
-   - Output Directory: `dist`
-5. Thêm các biến môi trường
-6. Nhấp vào "Deploy"
-
-Cách 2: Sử dụng Vercel CLI
-
-```bash
-vercel
-```
-
-## Cấu trúc thư mục dự án
-
-```
-web-album-app/
-├── public/               # Tài nguyên tĩnh
-├── src/                  # Mã nguồn
-│   ├── api/              # API services
-│   ├── assets/           # Tài nguyên (hình ảnh, fonts)
-│   ├── components/       # React components
-│   │   ├── admin/        # Components quản trị
-│   │   ├── ai/           # Components AI
-│   │   ├── auth/         # Components xác thực
-│   │   ├── gallery/      # Components thư viện ảnh
-│   │   ├── layout/       # Components bố cục
-│   │   ├── ui/           # UI components
-│   │   └── upload/       # Components tải lên
-│   ├── context/          # React contexts
-│   ├── hooks/            # Custom hooks
-│   ├── pages/            # Các trang
-│   ├── styles/           # CSS/SCSS files
-│   ├── utils/            # Tiện ích
-│   ├── App.tsx           # Component gốc
-│   └── main.tsx          # Điểm vào ứng dụng
-├── .env.local            # Biến môi trường cục bộ
-├── index.html            # HTML template
-├── package.json          # Cấu hình npm
-├── tailwind.config.js    # Cấu hình Tailwind CSS
-├── tsconfig.json         # Cấu hình TypeScript
-└── vite.config.ts        # Cấu hình Vite
+https://your-username.github.io/web-album-app/
 ```
 
 ## Khắc phục sự cố
 
+### Vấn đề: Lỗi TypeScript khi build
+
+**Giải pháp:**
+- Đảm bảo rằng tất cả các file TypeScript đều có cú pháp hợp lệ
+- Kiểm tra các lỗi cú pháp bằng cách chạy `npx tsc --noEmit`
+- Sửa các lỗi được báo cáo trong terminal
+
+### Vấn đề: Lỗi "npm ci" trong GitHub Actions
+
+**Giải pháp:**
+- Sử dụng `npm install` thay vì `npm ci` trong workflow
+- Hoặc tạo file package-lock.json trước khi chạy `npm ci`
+- Đảm bảo rằng file package.json có định dạng hợp lệ
+
+### Vấn đề: Trang trắng sau khi triển khai
+
+**Giải pháp:**
+- Kiểm tra console trong DevTools của trình duyệt để xem lỗi
+- Đảm bảo rằng `base` trong vite.config.ts khớp với tên repository
+- Kiểm tra xem các tài nguyên tĩnh có được tải đúng không
+
 ### Vấn đề: API keys không hoạt động
 
 **Giải pháp:**
-- Kiểm tra xem API keys đã được thêm đúng vào file `.env.local`
-- Đảm bảo rằng các API đã được kích hoạt trong Google Cloud Console
-- Kiểm tra giới hạn hạn ngạch API
-
-### Vấn đề: Ứng dụng không tải được
-
-**Giải pháp:**
-- Xóa thư mục `node_modules` và file `package-lock.json`
-- Chạy lại `npm install`
-- Khởi động lại ứng dụng với `npm run dev`
-
-### Vấn đề: Lỗi CORS khi gọi API
-
-**Giải pháp:**
-- Đảm bảo rằng domain của ứng dụng đã được thêm vào danh sách cho phép trong cấu hình API
-- Sử dụng proxy server trong môi trường phát triển
-
-### Vấn đề: Lỗi khi triển khai
-
-**Giải pháp:**
-- Kiểm tra logs triển khai
-- Đảm bảo rằng Node.js version trên máy chủ triển khai tương thích
-- Kiểm tra cấu hình build trong `package.json`
+- Đảm bảo rằng các API keys đã được cấu hình đúng trong file .env.local
+- Trong môi trường sản xuất, bạn cần cấu hình các biến môi trường trong GitHub repository
 
 ---
 

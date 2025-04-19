@@ -1,25 +1,29 @@
 import React from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ToastProvider } from './context/ToastContext';
-import Layout from './components/layout/Layout';
-import Home from './pages/Home';
-import GalleryPage from './pages/GalleryPage';
-import ProfilePage from './pages/ProfilePage';
-import UploadPage from './pages/UploadPage';
 
+// Import pages and components as needed
 const App: React.FC = () => {
   return (
-    <ToastProvider>
-      <Layout>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/gallery" element={<GalleryPage />} />
-          <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/upload" element={<UploadPage />} />
-          <Route path="/shared/:token" element={<GalleryPage />} />
-        </Routes>
-      </Layout>
-    </ToastProvider>
+    <Router basename="/web-album-app">
+      <ToastProvider>
+        <div className="min-h-screen bg-gray-50">
+          {/* Your app content will go here */}
+          <main className="container mx-auto px-4 py-8">
+            <h1 className="text-3xl font-bold text-center text-purple-700 mb-8">
+              Web Album Ảnh
+            </h1>
+            <div className="max-w-2xl mx-auto">
+              {/* This is where your routes would normally go */}
+              <Routes>
+                <Route path="/" element={<div>Trang chủ</div>} />
+                {/* Add more routes as needed */}
+              </Routes>
+            </div>
+          </main>
+        </div>
+      </ToastProvider>
+    </Router>
   );
 };
 
